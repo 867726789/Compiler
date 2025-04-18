@@ -1,0 +1,5 @@
+
+fun @main(): i32 {
+%main_entry:
+	ret %0
+}

@@ -4,7 +4,7 @@
 #include <memory>
 #include <string>
 #include "include/ast.hpp"
-
+#include "include/asm.hpp"
 
 using namespace std;
 
@@ -41,18 +41,18 @@ int main(int argc, const char *argv[]) {
     ast->print();
     koopa_ofs.close();
   } 
-  // else if (mode == string("-riscv")) {
-  //   koopa_ofs.open("ir.koopa");
-	// 	ast->print();
-	// 	koopa_ofs.close();
+  else if (mode == string("-riscv")) {
+    koopa_ofs.open("ir.koopa");
+		ast->print();
+		koopa_ofs.close();
 
-  //   char koopa_ir[1 << 20];
-	// 	ifstream koopa_ifs("ir.koopa");
-	// 	koopa_ifs.read(koopa_ir, sizeof(koopa_ir));
-	// 	riscv_ofs.open(output);
-	// 	parse_riscv(koopa_ir);
-	// 	riscv_ofs.close();
-  // }
+    char koopa_ir[1 << 20];
+		ifstream koopa_ifs("ir.koopa");
+		koopa_ifs.read(koopa_ir, sizeof(koopa_ir));
+		riscv_ofs.open(output);
+		parse_riscv(koopa_ir);
+		riscv_ofs.close();
+  }
 
   return 0;
 }

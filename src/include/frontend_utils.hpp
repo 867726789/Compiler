@@ -18,7 +18,7 @@ public:
 
   // 友元函数, 打印结果
   friend ostream& operator<<(ostream& os, const Result& result) {
-    os << "%" << result.value;
+    os << result.value;
     return os;
   }
 

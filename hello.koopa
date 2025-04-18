@@ -1,5 +1,6 @@
 
-fun @main(): i32 {
-%main_entry:
-	ret %0
-}
+	.text
+	.globl main
+main:
+	li a0, 0
+	ret

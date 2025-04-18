@@ -31,38 +31,57 @@ void yyerror(unique_ptr<BaseAST> &ast, const char *s);
   string *str_val;
   int int_val;
   BaseAST *ast_val;
+  vector<unique_ptr<BaseAST>> *vec_val;
 }
 
 // lexer 返回的所有 token 种类的声明
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
-%token INT RETURN
+%token INT VOID RETURN
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef Block Stmt Number
+%type <ast_val> Program CompUnit 
+%type <ast_val> FuncDef
+%type <ast_val> Block Stmt Number
+
+
+%type <vec_val> ExtendCompUnit ExtendStmt
 
 %%
 
-// 开始符, CompUnit ::= FuncDef, 大括号后声明了解析完成后 parser 要做的事情
-CompUnit
-  : FuncDef {
-    auto comp_unit = make_unique<CompUnitAST>();
-    comp_unit->func_def = unique_ptr<BaseAST>($1);
-    ast = move(comp_unit);
+Program
+  : CompUnit ExtendCompUnit {
+    auto program = make_unique<ProgramAST>();
+    auto comp_unit = $1;
+    vector<unique_ptr<BaseAST>> *comp_unit_vec = $2;
+    program->comp_units.emplace_back(comp_unit);
+    for (auto& comp_unit : *comp_unit_vec) {
+      program->comp_units.emplace_back(move(comp_unit));
+    }
+    ast = move(program);
   }
   ;
 
-// FuncDef ::= FuncType IDENT '(' ')' Block;
-// 我们这里可以直接写 '(' 和 ')', 因为之前在 lexer 里已经处理了单个字符的情况
-// 解析完成后, 把这些符号的结果收集起来, 然后拼成一个新的字符串, 作为结果返回
-// $$ 表示非终结符的返回值, 我们可以通过给这个符号赋值的方法来返回结果
-// 你可能会问, FuncType, IDENT 之类的结果已经是字符串指针了
-// 为什么还要用 unique_ptr 接住它们, 然后再解引用, 把它们拼成另一个字符串指针呢
-// 因为所有的字符串指针都是我们 new 出来的, new 出来的内存一定要 delete
-// 否则会发生内存泄漏, 而 unique_ptr 这种智能指针可以自动帮我们 delete
-// 虽然此处你看不出用 unique_ptr 和手动 delete 的区别, 但当我们定义了 AST 之后
-// 这种写法会省下很多内存管理的负担
+ExtendCompUnit
+  : {
+    vector<unique_ptr<BaseAST>>* comp_unit_vec = new vector<unique_ptr<BaseAST>>;
+    // $$ 是 Bison 提供的宏, 它代表当前规则的返回值
+    $$ = comp_unit_vec;
+  }
+  | ExtendCompUnit CompUnit {
+    vector<unique_ptr<BaseAST>>* comp_unit_vec = $1;
+    comp_unit_vec->emplace_back($2);
+    $$ = comp_unit_vec;
+  }
+  ;
+
+CompUnit
+  : FuncDef {
+    $$ = $1;
+  }
+  ;
+
 FuncDef
   : INT IDENT '(' ')' Block {
     auto ast = new FuncDefAST();
@@ -71,15 +90,44 @@ FuncDef
     ast->block = unique_ptr<BaseAST>($5);
     $$ = ast;
   }
-  ;
-
-Block
-  : '{' Stmt '}' {
-    auto ast = new BlockAST();
-    ast->stmt = unique_ptr<BaseAST>($2);
+  | VOID IDENT '(' ')' Block {
+    auto ast = new FuncDefAST();
+    ast->func_type = FuncDefAST::FuncType::VOID;
+    ast->ident = *unique_ptr<string>($2);
+    ast->block = unique_ptr<BaseAST>($5);
     $$ = ast;
   }
   ;
+
+Block
+  : '{' Stmt ExtendStmt'}' {
+    auto ast = new BlockAST();
+    auto stmt = $2;
+    vector<unique_ptr<BaseAST>>* stmts_vec = $3;
+    ast->stmts.emplace_back(stmt);
+    for (auto& stmt : *stmts_vec) {
+      ast->stmts.emplace_back(move(stmt));
+    }
+    $$ = ast;
+  }
+  | '{' '}' {
+    // 空代码块
+    auto ast = new BlockAST();
+    ast->stmts = vector<unique_ptr<BaseAST>>();
+    $$ = ast;
+  }
+  ;
+
+ExtendStmt
+  : {
+    vector<unique_ptr<BaseAST>> *stmts_vec = new vector<unique_ptr<BaseAST>>;
+    $$ = stmts_vec;
+  }
+  | ExtendStmt Stmt {
+    vector<unique_ptr<BaseAST>> *stmts_vec = $1;
+    stmts_vec->emplace_back($2);
+    $$ = stmts_vec;
+  }
 
 Stmt
   : RETURN Number ';' {

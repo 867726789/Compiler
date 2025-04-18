@@ -1,16 +1,18 @@
 #include "include/ast.hpp"
 
-
 /**
- * @brief 打印根节点 CompUnitAST
+ * @brief 打印程序根节点 ProgramAST
  * */
-Result CompUnitAST::print() const {
-    func_def->print();
+Result ProgramAST::print() const {
+    for (auto &comp_unit : comp_units) {
+        comp_unit->print();
+    }
     return Result();
 }
 
+
 /**
- * @brief 打印根节点 CompUnitAST
+ * @brief 打印函数定义 FuncDefAST
  * */
 Result FuncDefAST::print() const {
     koopa_ofs << endl;
@@ -49,7 +51,9 @@ Result FuncDefAST::print() const {
  * @brief 打印函数体
  * */
 Result BlockAST::print() const {
-    stmt->print();
+    for (auto &stmt : stmts) {
+        stmt->print();
+    }
     return Result();
 }
 

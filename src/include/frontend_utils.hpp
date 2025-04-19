@@ -4,6 +4,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <unordered_map>
 using namespace std;
 
 
@@ -41,17 +42,31 @@ public:
 
 /**
 * @brief 前端全局信息管理器，管理横跨 block 的全局信息
+* @note - `short_circuit_count`：短路求值的计数，用于生成短路求值的标签
 * @note - `temp_count`：临时变量分配计数，用于生成临时变量,SSA 静态单赋值使用
 */
 class EnvironmentManager {
 private:
+
+  // 短路求值的计数，用于生成短路求值的标签
+  int short_circuit_count = 0;
   // 临时变量分配计数，用于生成临时变量
   int temp_count = 0;
 
 public:
+  // 是否已经存在过分配某变量的指令，避免重复 alloc
+  unordered_map<string, bool> is_symbol_allocated;
+
+  // 短路相关
+  string get_short_true_label();
+  string get_short_false_label();
+  string get_short_end_label();
+  string get_short_result_reg();
+  void add_short_circuit_count();
+
   // 获取临时变量
-  int get_and_inc_temp_count() { return temp_count++;}
-  int get_cur_temp_count() { return temp_count;}
+  int get_and_inc_temp_count();
+  int get_cur_temp_count();
 };
 
 extern EnvironmentManager environment_manager;

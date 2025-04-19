@@ -46,7 +46,7 @@ void yyerror(unique_ptr<BaseAST> &ast, const char *s);
 %type <ast_val> Program CompUnit 
 %type <ast_val> FuncDef
 %type <ast_val> Block BlockItem Stmt 
-%type <ast_val> Exp PrimaryExp UnaryExp AddExp MulExp 
+%type <ast_val> Exp PrimaryExp UnaryExp AddExp MulExp LOrExp LAndExp EqExp RelExp
 %type <vec_val> ExtendCompUnit ExtendBlockItem
 
 %type <int_val> Number
@@ -163,9 +163,71 @@ Stmt
   ;
 
 Exp
-  : AddExp {
+  : LOrExp {
     auto ast = new ExpAST();
+    ast->l_or_exp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  ;
+
+LOrExp
+  : LAndExp {
+    auto ast = new LOrExpAST();
+    ast->l_and_exp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  | LOrExp OrOp LAndExp {
+    auto ast = new LExpWithOpAST();
+    ast->logical_op = LExpWithOpAST::LogicalOp::LOGICAL_OR;
+    ast->left = unique_ptr<BaseAST>($1);
+    ast->right = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  }
+  ;
+
+LAndExp 
+  : EqExp {
+    auto ast = new LAndExpAST();
+    ast->eq_exp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  | LAndExp AndOp EqExp {
+    auto ast = new LExpWithOpAST();
+    ast->logical_op = LExpWithOpAST::LogicalOp::LOGICAL_AND;
+    ast->left = unique_ptr<BaseAST>($1);
+    ast->right = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  }
+  ;
+
+EqExp
+  : RelExp {
+    auto ast = new EqExpAST();
+    ast->rel_exp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  | EqExp EqOp RelExp {
+    auto ast = new EqExpWithOpAST();
+    auto eq_op = *unique_ptr<string>($2);
+    ast->eq_op = ast->convert(eq_op);
+    ast->left = unique_ptr<BaseAST>($1);
+    ast->right = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  }
+  ;
+
+RelExp
+  : AddExp {
+    auto ast = new RelExpAST();
     ast->add_exp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  | RelExp RelOp AddExp {
+    auto ast = new RelExpWithOpAST();
+    auto rel_op = *unique_ptr<string>($2);
+    ast->rel_op = ast->convert(rel_op);
+    ast->left = unique_ptr<BaseAST>($1);
+    ast->right = unique_ptr<BaseAST>($3);
     $$ = ast;
   }
   ;

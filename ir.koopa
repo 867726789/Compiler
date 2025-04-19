@@ -1,5 +1,5 @@
 
 fun @main(): i32 {
 %main_entry:
-	ret 14
+	ret 0
 }

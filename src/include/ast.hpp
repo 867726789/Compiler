@@ -82,10 +82,111 @@ public:
  */
 class ExpAST : public BaseAST {
 public:
-    // 优先表达式
-    unique_ptr<BaseAST> add_exp;
+    // 逻辑或表达式
+    unique_ptr<BaseAST> l_or_exp;
     Result print() const override;
 };
+
+/**
+* @brief 逻辑或表达式 AST 类
+*/
+class LOrExpAST : public BaseAST {
+public:
+  // 逻辑与表达式
+  unique_ptr<BaseAST> l_and_exp;
+  Result print() const override;
+};
+
+/**
+  * @brief 逻辑与表达式 AST 类
+  */
+class LAndExpAST : public BaseAST {
+public:
+  // 等值表达式
+  unique_ptr<BaseAST> eq_exp;
+  Result print() const override;
+};
+
+/**
+  * @brief 逻辑与表达式 AST 类
+  */
+class LExpWithOpAST : public BaseAST {
+public:
+  // 逻辑运算符
+  enum class LogicalOp {
+      LOGICAL_OR,
+      LOGICAL_AND
+  };
+  LogicalOp logical_op;
+  // 左操作数
+  unique_ptr<BaseAST> left;
+  // 右操作数
+  unique_ptr<BaseAST> right;
+  Result print() const override;
+};
+
+/**
+  * @brief 等值表达式 AST 类
+  */
+class EqExpAST : public BaseAST {
+public:
+  // 关系表达式
+  unique_ptr<BaseAST> rel_exp;
+  Result print() const override;
+};
+
+/**
+  * @brief 等值表达式 AST 类
+  */
+class EqExpWithOpAST : public BaseAST {
+public:
+  // 等值运算符
+  enum class EqOp {
+      EQ,
+      NEQ
+  };
+  EqOp eq_op;
+  // 左操作数
+  unique_ptr<BaseAST> left;
+  // 右操作数
+  unique_ptr<BaseAST> right;
+  // 将字符串形式的运算符转换为等值运算符
+  EqOp convert(const string& op) const;
+  Result print() const override;
+};
+  
+/**
+  * @brief 关系表达式 AST 类
+  */
+class RelExpAST : public BaseAST {
+public:
+  // 加法表达式
+  unique_ptr<BaseAST> add_exp;
+  Result print() const override;
+};
+  
+/**
+  * @brief 关系表达式 AST 类
+*/
+class RelExpWithOpAST : public BaseAST {
+public:
+  // 关系运算符
+  enum class RelOp {
+      LE,
+      GE,
+      LT,
+      GT
+  };
+  RelOp rel_op;
+  // 左操作数
+  unique_ptr<BaseAST> left;
+  // 右操作数
+  unique_ptr<BaseAST> right;
+  // 将字符串形式的运算符转换为关系运算符
+  RelOp convert(const string& op) const;
+  Result print() const override;
+};
+
 
 /**
  * @brief 加法表达式 AST 类

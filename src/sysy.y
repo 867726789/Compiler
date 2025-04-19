@@ -36,17 +36,20 @@ void yyerror(unique_ptr<BaseAST> &ast, const char *s);
 
 // lexer 返回的所有 token 种类的声明
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
-%token INT VOID RETURN
+%token INT VOID CONST RETURN
 %token <str_val> IDENT
+%token <str_val> EqOp RelOp AddOp NotOp MulOp AndOp OrOp
 %token <int_val> INT_CONST
+
 
 // 非终结符的类型定义
 %type <ast_val> Program CompUnit 
 %type <ast_val> FuncDef
-%type <ast_val> Block Stmt Number
+%type <ast_val> Block BlockItem Stmt 
+%type <ast_val> Exp PrimaryExp UnaryExp
+%type <vec_val> ExtendCompUnit ExtendBlockItem
 
-
-%type <vec_val> ExtendCompUnit ExtendStmt
+%type <int_val> Number
 
 %%
 
@@ -55,7 +58,7 @@ Program
     auto program = make_unique<ProgramAST>();
     auto comp_unit = $1;
     vector<unique_ptr<BaseAST>> *comp_unit_vec = $2;
-    program->comp_units.emplace_back(comp_unit);
+    program->comp_units.emplace_back(move(comp_unit));
     for (auto& comp_unit : *comp_unit_vec) {
       program->comp_units.emplace_back(move(comp_unit));
     }
@@ -71,7 +74,7 @@ ExtendCompUnit
   }
   | ExtendCompUnit CompUnit {
     vector<unique_ptr<BaseAST>>* comp_unit_vec = $1;
-    comp_unit_vec->emplace_back($2);
+    comp_unit_vec->emplace_back(move($2));
     $$ = comp_unit_vec;
   }
   ;
@@ -100,48 +103,105 @@ FuncDef
   ;
 
 Block
-  : '{' Stmt ExtendStmt'}' {
+  : '{' BlockItem ExtendBlockItem '}' {
+    // 带语句的块
     auto ast = new BlockAST();
-    auto stmt = $2;
-    vector<unique_ptr<BaseAST>>* stmts_vec = $3;
-    ast->stmts.emplace_back(stmt);
-    for (auto& stmt : *stmts_vec) {
-      ast->stmts.emplace_back(move(stmt));
+    auto block_item = $2;
+    vector<unique_ptr<BaseAST>> *block_item_vec = $3;
+    ast->block_items.emplace_back(move(block_item));
+    for (auto& block_item : *block_item_vec) {
+      ast->block_items.emplace_back(move(block_item));
     }
     $$ = ast;
   }
-  | '{' '}' {
-    // 空代码块
+  | '{' '}'{
+    // 空块
     auto ast = new BlockAST();
-    ast->stmts = vector<unique_ptr<BaseAST>>();
+    ast->block_items = vector<unique_ptr<BaseAST>>();
     $$ = ast;
   }
   ;
 
-ExtendStmt
+ExtendBlockItem
   : {
-    vector<unique_ptr<BaseAST>> *stmts_vec = new vector<unique_ptr<BaseAST>>;
-    $$ = stmts_vec;
+    vector<unique_ptr<BaseAST>> *block_item_vec = new vector<unique_ptr<BaseAST>>;
+    $$ = block_item_vec;
   }
-  | ExtendStmt Stmt {
-    vector<unique_ptr<BaseAST>> *stmts_vec = $1;
-    stmts_vec->emplace_back($2);
-    $$ = stmts_vec;
+  | ExtendBlockItem BlockItem {
+    // 从 ExtendBlockItem 规约到 BlockItem, 则把 BlockItem 的解析返回值移动到 ExtendBlockItem 的 vector 中
+    vector<unique_ptr<BaseAST>> *block_item_vec = $1;
+    block_item_vec->emplace_back(move($2));
+    $$ = block_item_vec;
   }
+  ;
+
+BlockItem
+  : Stmt {
+    // 语句
+    $$ = $1;
+  }
+  ;
+
 
 Stmt
-  : RETURN Number ';' {
-    auto ast = new StmtAST();
-    ast->number = unique_ptr<BaseAST>($2);
+  : RETURN Exp ';' {
+    auto ast = new StmtReturnAST();
+    ast->exp = unique_ptr<BaseAST>($2);
+    $$ = ast;
+  }
+  | RETURN ';' {
+    auto ast = new StmtReturnAST();
+    $$ = ast;
+  }
+  ;
+
+Exp
+  : UnaryExp {
+    auto ast = new ExpAST();
+    ast->unary_exp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  ;
+
+UnaryExp
+  : PrimaryExp {
+    // 括号运算符表达式，如 (a)
+    auto ast = new UnaryExpAST();
+    ast->primary_exp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  | AddOp UnaryExp {
+    auto ast = new UnaryExpWithOpAST();
+    auto add_op = *unique_ptr<string>($1);
+    ast->unary_op = ast->convert(add_op);
+    ast->unary_exp = unique_ptr<BaseAST>($2);
+    $$ = ast;
+  }
+  | NotOp UnaryExp {
+    auto ast = new UnaryExpWithOpAST();
+    auto not_op = *unique_ptr<string>($1);
+    ast->unary_op = ast->convert(not_op);
+    ast->unary_exp = unique_ptr<BaseAST>($2);
+    $$ = ast;
+  }
+  ;
+
+PrimaryExp
+  : '(' Exp ')' {
+    auto ast = new PrimaryExpAST();
+    ast->exp = unique_ptr<BaseAST>($2);
+    $$ = ast;
+  } 
+  | Number {
+    auto ast = new PrimaryExpWithNumberAST();
+    ast->number = $1;
     $$ = ast;
   }
   ;
 
 Number
   : INT_CONST { 
-    auto ast = new NumberAST();
-    ast-> number = $1;
-    $$ = ast;
+    $$ = $1;
   }
   ;
 

@@ -4,6 +4,8 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <optional>
+#include <cassert>
 #include "include/frontend_utils.hpp"
 
 using namespace std;
@@ -53,20 +55,6 @@ public:
   Result print() const override;
 };
 
-// /**
-// * @brief 函数参数 AST 类
-// */
-// class FuncParamAST : public BaseAST {
-//  public:
-//   // 函数参数名
-//   string ident;
-//   // 是否为数组
-//   bool is_array;
-//   // 数组
-//   vector<unique_ptr<BaseAST>>* array_index;
-//   Result print() const override;
-// }
-
 
 /**
  * @brief 基本块 AST 类
@@ -74,7 +62,7 @@ public:
 class BlockAST : public BaseAST {
  public:
   // 基本块中内容
-  vector<unique_ptr<BaseAST>> stmts;
+  vector<unique_ptr<BaseAST>> block_items;
 
   Result print() const override;
 };
@@ -82,20 +70,69 @@ class BlockAST : public BaseAST {
 /**
  * @brief 语句 AST 类
  */
-class StmtAST : public BaseAST {
- public:
-  unique_ptr<BaseAST> number;
-
+class StmtReturnAST : public BaseAST {
+public:
+  // 返回值，可为空
+  optional<unique_ptr<BaseAST>> exp;
   Result print() const override;
 };
 
 /**
- * @brief 数字字面量表达式 AST 类
+ * @brief 表达式 AST 类
  */
-class NumberAST : public BaseAST {
- public:
-  // 数字字面量的值
-  int number;
+class ExpAST : public BaseAST {
+public:
+    // 优先表达式
+    unique_ptr<BaseAST> unary_exp;
+    Result print() const override;
+};
 
+/**
+ * @brief 一元表达式 AST 类
+ */
+class UnaryExpAST : public BaseAST {
+public:
+    // 优先表达式
+    unique_ptr<BaseAST> primary_exp;
+    Result print() const override;
+};
+  
+
+/**
+ * @brief 带运算符的一元表达式 AST 类
+ */
+class UnaryExpWithOpAST : public BaseAST {
+public:
+  // 一元操作符  
+  enum class UnaryOp {
+    POSITIVE,
+    NEGATIVE,
+    NOT
+  };
+  UnaryOp unary_op;
+  // 一元表达式
+  unique_ptr<BaseAST> unary_exp;
+  // 将字符串形式的运算符转换为一元运算符
+  UnaryOp convert(const string& op) const;
+  Result print() const override;
+};
+
+/**
+ * @brief 优先表达式 AST 类
+ */
+class PrimaryExpAST : public BaseAST {
+public:
+  // 表达式
+  unique_ptr<BaseAST> exp;
+  Result print() const override;
+};
+
+/**
+ * @brief 数字字面量优先表达式 AST 类
+ */
+class PrimaryExpWithNumberAST : public BaseAST {
+public:
+  // 字面量
+  int number;
   Result print() const override;
 };

@@ -81,7 +81,131 @@ Result StmtReturnAST::print() const {
  * @brief 打印表达式
  * */
 Result ExpAST::print() const {
+    return add_exp->print();
+}
+
+/**
+ * @brief 打印加法表达式
+ * */
+ Result AddExpAST::print() const {
+    return mul_exp->print();
+}
+
+/**
+ * @brief 转换加法运算符，输出枚举类型
+ * @param[in] op 加法运算符
+ * @return 加法运算符枚举类型
+ */
+AddExpWithOpAST::AddOp AddExpWithOpAST::convert(const string& op) const {
+    if (op == "+") {
+        return AddOp::ADD;
+    }
+    else if (op == "-") {
+        return AddOp::SUB;
+    }
+    throw runtime_error("Invalid operator: " + op);
+}
+
+/**
+ * @brief 打印带符号的加法表达式
+ * @return 计算结果所在寄存器或立即数
+ */
+Result AddExpWithOpAST::print() const {
+    // 先计算左右表达式结果
+    Result lhs = left->print();
+    Result rhs = right->print();
+    // 若左右表达式结果均为常量，则直接返回常量结果
+    if (lhs.type == Result::Type::IMM && rhs.type == Result::Type::IMM) {
+        switch (add_op) {
+        case AddOp::ADD:
+            return IMM_(lhs.value + rhs.value);
+        case AddOp::SUB:
+            return IMM_(lhs.value - rhs.value);
+        default:
+            assert(false);
+        }
+    }
+    // 若左右表达式结果不均为常量，则使用临时变量计算结果并存储之
+    else {
+        Result result = NEW_REG_;
+        switch (add_op) {
+        case AddOp::ADD:
+            koopa_ofs << "\t" << result << " = add " << lhs << ", " << rhs << endl;
+            break;
+        case AddOp::SUB:
+            koopa_ofs << "\t" << result << " = sub " << lhs << ", " << rhs << endl;
+            break;
+        default:
+            assert(false);
+        }
+        return result;
+    }
+}
+
+/**
+ * @brief 打印乘法表达式
+ * */
+Result MulExpAST::print() const {
     return unary_exp->print();
+}
+
+/**
+ * @brief 转换乘法运算符，输出枚举类型
+ * @param[in] op 乘法运算符
+ * @return 乘法运算符枚举类型
+ */
+MulExpWithOpAST::MulOp MulExpWithOpAST::convert(const string& op) const {
+    if (op == "*") {
+        return MulOp::MUL;
+    }
+    else if (op == "/") {
+        return MulOp::DIV;
+    }
+    else if (op == "%") {
+        return MulOp::MOD;
+    }
+    throw runtime_error("Invalid operator: " + op);
+}
+
+/**
+ * @brief 打印带符号的乘法表达式
+ * @return 计算结果所在寄存器或立即数
+ */
+Result MulExpWithOpAST::print() const {
+    // 先计算左右表达式结果
+    Result lhs = left->print();
+    Result rhs = right->print();
+    // 若左右表达式结果均为常量，则直接返回常量结果
+    if (lhs.type == Result::Type::IMM && rhs.type == Result::Type::IMM) {
+        switch (mul_op) {
+        case MulOp::MUL:
+            return IMM_(lhs.value * rhs.value);
+        case MulOp::DIV:
+            return IMM_(lhs.value / rhs.value);
+        case MulOp::MOD:
+            return IMM_(lhs.value % rhs.value);
+        default:
+            assert(false);
+        }
+    }
+    // 若左右表达式结果不均为常量，则使用临时变量计算结果并存储之
+    else {
+        Result result = NEW_REG_;
+        switch (mul_op) {
+        case MulOp::MUL:
+            koopa_ofs << "\t" << result << " = mul " << lhs << ", " << rhs << endl;
+            break;
+        case MulOp::DIV:
+            koopa_ofs << "\t" << result << " = div " << lhs << ", " << rhs << endl;
+            break;
+        case MulOp::MOD:
+            koopa_ofs << "\t" << result << " = mod " << lhs << ", " << rhs << endl;
+            break;
+        default:
+            assert(false);
+        }
+        return result;
+    }
 }
 
 /**

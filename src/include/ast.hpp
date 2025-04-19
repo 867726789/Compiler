@@ -83,8 +83,69 @@ public:
 class ExpAST : public BaseAST {
 public:
     // 优先表达式
-    unique_ptr<BaseAST> unary_exp;
+    unique_ptr<BaseAST> add_exp;
     Result print() const override;
+};
+
+/**
+ * @brief 加法表达式 AST 类
+ */
+class AddExpAST : public BaseAST {
+public:
+  // 乘法表达式
+  unique_ptr<BaseAST> mul_exp;
+  Result print() const override;
+};
+
+/**
+ * @brief 加法表达式(带符号) AST 类
+ */
+class AddExpWithOpAST : public BaseAST {
+public:
+  // 加法运算符
+  enum class AddOp {
+      ADD,
+      SUB
+  };
+  AddOp add_op;
+  // 左操作数
+  unique_ptr<BaseAST> left;
+  // 右操作数
+  unique_ptr<BaseAST> right;
+  // 将字符串形式的运算符转换为加法运算符
+  AddOp convert(const string& op) const;
+  Result print() const override;
+};
+
+/**
+ * @brief 乘法表达式 AST 类
+ */
+class MulExpAST : public BaseAST {
+public:
+  // 一元表达式
+  unique_ptr<BaseAST> unary_exp;
+  Result print() const override;
+};
+
+/**
+ * @brief 乘法表达式(带符号) AST 类
+ */
+class MulExpWithOpAST : public BaseAST {
+public:
+  // 乘法运算符
+  enum class MulOp {
+    MUL,
+    DIV,
+    MOD
+  };
+  MulOp mul_op;
+  // 左操作数
+  unique_ptr<BaseAST> left;
+  // 右操作数
+  unique_ptr<BaseAST> right;
+  // 将字符串形式的运算符转换为乘法运算符
+  MulOp convert(const string& op) const;
+  Result print() const override;
 };
 
 /**

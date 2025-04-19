@@ -46,7 +46,7 @@ void yyerror(unique_ptr<BaseAST> &ast, const char *s);
 %type <ast_val> Program CompUnit 
 %type <ast_val> FuncDef
 %type <ast_val> Block BlockItem Stmt 
-%type <ast_val> Exp PrimaryExp UnaryExp
+%type <ast_val> Exp PrimaryExp UnaryExp AddExp MulExp 
 %type <vec_val> ExtendCompUnit ExtendBlockItem
 
 %type <int_val> Number
@@ -144,21 +144,61 @@ BlockItem
 
 
 Stmt
-  : RETURN Exp ';' {
+  : 
+  Block {
+    // 块语句，如 { int a = 1; }
+    $$ = $1;
+  }
+  | RETURN Exp ';' {
+    // 返回值, return exp;
     auto ast = new StmtReturnAST();
     ast->exp = unique_ptr<BaseAST>($2);
     $$ = ast;
   }
   | RETURN ';' {
+    // 空返回, return;
     auto ast = new StmtReturnAST();
     $$ = ast;
   }
   ;
 
 Exp
-  : UnaryExp {
+  : AddExp {
     auto ast = new ExpAST();
+    ast->add_exp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  ;
+
+AddExp
+  : MulExp {
+    // 乘法表达式
+    auto ast = new AddExpAST();
+    ast->mul_exp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  | AddExp AddOp MulExp {
+    auto ast = new AddExpWithOpAST();
+    auto add_op = *unique_ptr<string>($2);
+    ast->add_op = ast->convert(add_op);
+    ast->left = unique_ptr<BaseAST>($1);
+    ast->right = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  }
+  ;
+
+MulExp
+  : UnaryExp {
+    auto ast = new MulExpAST();
     ast->unary_exp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  | MulExp MulOp UnaryExp {
+    auto ast = new MulExpWithOpAST();
+    auto mul_op = *unique_ptr<string>($2);
+    ast->mul_op = ast->convert(mul_op);
+    ast->left = unique_ptr<BaseAST>($1);
+    ast->right = unique_ptr<BaseAST>($3);
     $$ = ast;
   }
   ;

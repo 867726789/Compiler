@@ -57,15 +57,58 @@ public:
 
 
 /**
- * @brief 基本块 AST 类
- */
+* @brief 基本块 AST 类
+*/
 class BlockAST : public BaseAST {
- public:
+public:
   // 基本块中内容
   vector<unique_ptr<BaseAST>> block_items;
 
   Result print() const override;
 };
+
+/**
+* @brief 常量声明 AST 类
+*/
+class ConstDeclAST : public BaseAST {
+public:
+  // 常量定义列表
+  vector<unique_ptr<BaseAST>> const_defs;
+  Result print() const override;
+};
+
+/**
+* @brief 常量定义 AST 类
+*/
+class ConstDefAST : public BaseAST {
+public:
+  // 常量名
+  string ident;
+  // 初始化常量值
+  unique_ptr<BaseAST> value;
+  Result print() const override;
+};
+
+/**
+* @brief 常量初始化值 AST 类
+*/
+class ConstInitValAST : public BaseAST {
+public:
+    // 常量表达式
+    optional<unique_ptr<BaseAST>> const_exp;
+    // 打印普通常量初始化值
+    Result print() const override;
+};
+ 
+ /**
+  * @brief 常量表达式 AST 类
+  */
+ class ConstExpAST : public BaseAST {
+ public:
+     // 常量表达式
+     unique_ptr<BaseAST> exp;
+     Result print() const override;
+ };
 
 /**
  * @brief 语句 AST 类
@@ -76,6 +119,17 @@ public:
   optional<unique_ptr<BaseAST>> exp;
   Result print() const override;
 };
+
+/**
+ * @brief 左值 AST 类
+ */
+ class LValAST : public BaseAST {
+  public:
+      // 变量名
+      string ident;
+      // 打印左值
+      Result print() const override;
+  };
 
 /**
  * @brief 表达式 AST 类
@@ -298,3 +352,13 @@ public:
   int number;
   Result print() const override;
 };
+
+/**
+ * @brief 左值优先表达式 AST 类
+ */
+ class PrimaryExpWithLValAST : public BaseAST {
+  public:
+      // 左值
+      unique_ptr<BaseAST> l_val;
+      Result print() const override;
+  };

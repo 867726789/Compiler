@@ -45,9 +45,12 @@ void yyerror(unique_ptr<BaseAST> &ast, const char *s);
 // 非终结符的类型定义
 %type <ast_val> Program CompUnit 
 %type <ast_val> FuncDef
+%type <ast_val> Decl ConstDecl ConstDef ConstInitVal
 %type <ast_val> Block BlockItem Stmt 
-%type <ast_val> Exp PrimaryExp UnaryExp AddExp MulExp LOrExp LAndExp EqExp RelExp
-%type <vec_val> ExtendCompUnit ExtendBlockItem
+%type <ast_val> ConstExp LVal Exp PrimaryExp UnaryExp AddExp MulExp LOrExp LAndExp EqExp RelExp
+
+
+%type <vec_val> ExtendCompUnit ExtendBlockItem ExtendConstDef
 
 %type <int_val> Number
 
@@ -136,11 +139,74 @@ ExtendBlockItem
   ;
 
 BlockItem
-  : Stmt {
+  : Decl {
+    $$ = $1;
+  }
+  | Stmt {
     // 语句
     $$ = $1;
   }
   ;
+
+Decl
+  : ConstDecl {
+    // 常量声明
+    $$ = $1;
+  }
+  ;
+
+ConstDecl
+  : CONST INT ConstDef ExtendConstDef ';' {
+    // 常量声明，要处理一行有多个常量定义的情况，如 int a = 1, b = 2;
+    auto ast = new ConstDeclAST();
+    auto const_def = $3;
+    vector<unique_ptr<BaseAST>> *vec = $4;
+    ast->const_defs.push_back(unique_ptr<BaseAST>(const_def));
+    for (auto& ptr : *vec) {
+      ast->const_defs.push_back(move(ptr));
+    }
+    $$ = ast;
+  }
+  ;
+
+ExtendConstDef
+  : {
+    vector<unique_ptr<BaseAST>> *vec = new vector<unique_ptr<BaseAST>>;
+    $$ = vec;
+  }
+  | ExtendConstDef ',' ConstDef {
+    vector<unique_ptr<BaseAST>> *vec = $1;
+    vec->push_back(unique_ptr<BaseAST>($3));
+    $$ = vec;
+  }
+  ;
+
+ConstDef
+  : IDENT '=' ConstInitVal {
+    // 常量定义
+    auto ast = new ConstDefAST();
+    ast->ident = *unique_ptr<string>($1);
+    ast->value = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  }
+  ;
+
+ConstInitVal
+  : ConstExp {
+    auto ast = new ConstInitValAST();
+    ast->const_exp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  ;
+
+ConstExp
+  : Exp {
+    auto ast = new ConstExpAST();
+    ast->exp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  ;
+
 
 
 Stmt
@@ -158,6 +224,15 @@ Stmt
   | RETURN ';' {
     // 空返回, return;
     auto ast = new StmtReturnAST();
+    $$ = ast;
+  }
+  ;
+
+LVal
+  : IDENT  {
+    // 左值
+    auto ast = new LValAST();
+    ast->ident = *unique_ptr<string>($1);
     $$ = ast;
   }
   ;
@@ -299,6 +374,13 @@ PrimaryExp
     ast->number = $1;
     $$ = ast;
   }
+  | LVal {
+    // 变量表达式，如 a
+    auto ast = new PrimaryExpWithLValAST();
+    ast->l_val = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  ;
   ;
 
 Number

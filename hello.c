@@ -1,3 +1,4 @@
 int main() {
-  return (+(2 + 3 * 4) <= 19) != 1;
+	const int x = 1 + 1;  
+	return x;
 }

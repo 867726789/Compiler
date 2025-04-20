@@ -1,10 +1,12 @@
 #include "include/ast.hpp"
 
 
-
+// 全局符号表
+SymbolTable global_symbol_table;
+// 局部符号表
+SymbolTable* local_symbol_table = &global_symbol_table;
 // 全局环境管理器
 EnvironmentManager environment_manager;
-
 
 /**
  * @brief 打印程序根节点 ProgramAST
@@ -22,6 +24,19 @@ Result ProgramAST::print() const {
  * */
 Result FuncDefAST::print() const {
     koopa_ofs << endl;
+
+    // 函数体内必然非全局环境
+    environment_manager.is_global = false;
+    // 保存当前局部符号表
+    SymbolTable* parent_symbol_table = local_symbol_table;
+    // 创建新的局部符号表
+    local_symbol_table = new SymbolTable();
+    // 设置父符号表
+    local_symbol_table->set_parent(parent_symbol_table);
+    // 清空全局环境管理器的 is_symbol_allocated，因为不同函数体内是独立的
+    environment_manager.is_symbol_allocated.clear();
+    // 清空临时寄存器计数器
+    environment_manager.temp_count = 0;
 
     koopa_ofs << "fun @" << ident;
     koopa_ofs << "(";
@@ -49,6 +64,12 @@ Result FuncDefAST::print() const {
     //     koopa_ofs << "\tret" << endl;
     // }
     // koopa_ofs << "}" << endl;
+
+    // 恢复父符号表
+    delete local_symbol_table;
+    local_symbol_table = parent_symbol_table;
+    // 恢复全局环境状态
+    environment_manager.is_global = true;
     
     return Result();
 }
@@ -64,6 +85,45 @@ Result BlockAST::print() const {
 }
 
 /**
+ * @brief 打印常量定义列表
+ * */
+ Result ConstDeclAST::print() const {
+    // 遍历常量声明列表
+    for (auto& item : const_defs) {
+        item->print();
+    }
+    return Result();
+}
+
+/**
+ * @brief 打印常量定义
+ * */
+ Result ConstDefAST::print() const {
+    string ident_with_suffix = local_symbol_table->assign(ident);
+
+    Result value_result = value->print();
+    local_symbol_table->create(ident_with_suffix, VAL_(value_result.value));
+    return Result();
+ }
+
+/**
+ * @brief 打印常量初始化值
+ * */
+ Result ConstInitValAST::print() const {
+    if (const_exp) {
+        return (*const_exp)->print();
+    }
+    return Result();
+}
+
+/**
+ * @brief 打印常量表达式
+ * */
+Result ConstExpAST::print() const {
+    return exp->print();
+}
+
+/**
  * @brief 打印返回语句
  * */
 Result StmtReturnAST::print() const {
@@ -73,6 +133,20 @@ Result StmtReturnAST::print() const {
     }
     else {
         koopa_ofs << "\tret" << endl;
+    }
+    return Result();
+}
+
+/**
+ * @brief 打印左值
+ * @return 计算结果所在寄存器或立即数
+ */
+Result LValAST::print() const {
+    string ident_with_suffix = local_symbol_table->locate(ident);
+    assert(local_symbol_table->exist(ident_with_suffix));
+    auto symbol = local_symbol_table->read(ident_with_suffix);
+    if (symbol.type == Symbol::Type::VAL) {
+        return IMM_(symbol.value);
     }
     return Result();
 }
@@ -559,4 +633,12 @@ Result PrimaryExpAST::print() const {
  */
 Result PrimaryExpWithNumberAST::print() const {
     return IMM_(number);
+}
+
+/**
+ * @brief 打印左值优先表达式，即 a
+ * @return 左值结果所在寄存器
+ */
+ Result PrimaryExpWithLValAST::print() const {
+    return l_val->print();
 }
